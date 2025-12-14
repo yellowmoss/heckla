@@ -12,7 +12,8 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from pathlib import Path
 
-SITE_ROOT = Path.cwd()           # consuming repo root
+SITE_ROOT = Path(os.environ.get("GITHUB_WORKSPACE", Path.cwd()))
+
 CONTENT_DIR = SITE_ROOT / "content"
 TEMPLATES_DIR = SITE_ROOT / "templates"
 DIST_DIR = SITE_ROOT / "dist"
