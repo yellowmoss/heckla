@@ -11,13 +11,46 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 # --------------------------------------------------------------------
 
 
+import argparse
 from pathlib import Path
+import shutil
 
-SITE_ROOT = Path.cwd()
+# -----------------------------
+# Parse command-line arguments
+# -----------------------------
+parser = argparse.ArgumentParser()
+parser.add_argument("--site-root", type=str, default=".")
+parser.add_argument("--output", type=str, default="dist")
+args = parser.parse_args()
 
+SITE_ROOT = Path(args.site_root)
 CONTENT_DIR = SITE_ROOT / "content"
 TEMPLATES_DIR = SITE_ROOT / "templates"
-DIST_DIR = SITE_ROOT / "dist"
+DIST_DIR = Path(args.output)
+
+# Ensure DIST_DIR exists
+if DIST_DIR.exists():
+    shutil.rmtree(DIST_DIR)
+DIST_DIR.mkdir(parents=True, exist_ok=True)
+
+# -----------------------------
+# Example build logic
+# Replace with your Markdown + Jinja2 generation
+# -----------------------------
+for md_file in CONTENT_DIR.glob("**/*.md"):
+    rel_path = md_file.relative_to(CONTENT_DIR).with_suffix(".html")
+    out_file = DIST_DIR / rel_path
+    out_file.parent.mkdir(parents=True, exist_ok=True)
+
+    # Dummy HTML for demonstration
+    out_file.write_text(f"<html><body><h1>{md_file.stem}</h1></body></html>")
+
+print(f"Build complete. Output in {DIST_DIR}")
+
+
+
+
+
 
 # --------------------------------------------------------------------
 # Models
