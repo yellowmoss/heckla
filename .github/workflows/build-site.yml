@@ -1,9 +1,12 @@
 name: Build and deploy static site
 
 on:
-  push:
-    branches:
-      - main
+  workflow_call:
+    inputs:
+      python-version:
+        required: false
+        default: '3.11'
+        type: string
 
 permissions:
   contents: write
@@ -13,52 +16,42 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout consuming repo
-      - uses: actions/checkout@v4
+      - name: Checkout consuming repo
+        uses: actions/checkout@v4
 
-      # 2. Set up Python
-      - uses: actions/setup-python@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ inputs.python-version }}
 
-      # 3. Download Heckla files (build.py + requirements.txt) from the separate repo
       - name: Download Heckla engine
         run: |
           mkdir heckla
           curl -L -o heckla/build.py https://raw.githubusercontent.com/yellowmoss/heckla/main/build.py
           curl -L -o heckla/requirements.txt https://raw.githubusercontent.com/yellowmoss/heckla/main/requirements.txt
 
-      # 4. Install dependencies
-      - name: Install Heckla dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r heckla/requirements.txt
 
-      # 5. Build the site
       - name: Build site
         run: |
           python heckla/build.py
-
           if [ ! -d "dist" ] || [ -z "$(ls -A dist)" ]; then
             echo "Build failed: dist is missing or empty"
             exit 1
           fi
 
-      # 6. Deploy to orphan site branch
-      - name: Deploy to site branch
+      - name: Deploy to orphan site branch
         run: |
           git checkout --orphan site
           git rm -rf . || true
           git clean -fdx
-
           cp -r dist/* .
-
+          git add .
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
           git commit -m "Build site"
           git push -f origin site
 
-
-
-         
