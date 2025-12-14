@@ -1,16 +1,15 @@
 from pathlib import Path
 import shutil
 from dataclasses import dataclass
-
+import os
 import markdown
 import yaml
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
+
 # --------------------------------------------------------------------
 # Paths
 # --------------------------------------------------------------------
-
-from pathlib import Path
 
 SITE_ROOT = Path(os.environ.get("GITHUB_WORKSPACE", Path.cwd()))
 
