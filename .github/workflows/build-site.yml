@@ -8,53 +8,84 @@ on:
         default: "3.11"
         type: string
 
+permissions:
+  contents: write   # allow pushing to the consuming repo
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
     steps:
+      # -----------------------------------------------------------------
+      # 1. Checkout the consuming repo (site content + templates)
+      # -----------------------------------------------------------------
       - name: Checkout site repository
         uses: actions/checkout@v4
 
+      # -----------------------------------------------------------------
+      # 2. Checkout Heckla engine (reusable code)
+      # -----------------------------------------------------------------
       - name: Checkout Heckla engine
         uses: actions/checkout@v4
         with:
           repository: yellowmoss/heckla
           path: heckla
 
+      # -----------------------------------------------------------------
+      # 3. Set up Python
+      # -----------------------------------------------------------------
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python-version }}
 
+      # -----------------------------------------------------------------
+      # 4. Install dependencies
+      # -----------------------------------------------------------------
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r heckla/requirements.txt
 
+      # -----------------------------------------------------------------
+      # 5. Build site into dist/
+      # -----------------------------------------------------------------
       - name: Build site
         run: |
           python heckla/build.py
 
-      - name: Publish to site branch
+      # -----------------------------------------------------------------
+      # 6. Prepare orphan site branch (clean, only built files)
+      # -----------------------------------------------------------------
+      - name: Deploy to site branch
         run: |
+          # Safety check: dist exists and is not empty
           if [ ! -d "dist" ] || [ -z "$(ls -A dist)" ]; then
-            echo "dist missing or empty"
+            echo "Build failed: dist is missing or empty"
             exit 1
           fi
 
-          mkdir /tmp/site
-          cp -r dist/* /tmp/site/
+          # Copy only the build output into temporary folder
+          TMP_SITE=$(mktemp -d)
+          cp -rL dist/* "$TMP_SITE/"
 
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
+          # Create orphan branch for site
           git checkout --orphan site
           git rm -rf . || true
 
-          cp -r /tmp/site/* .
-          rm -rf dist
+          # Copy built files into repo root
+          cp -r "$TMP_SITE/"* .
+
+          # Commit and push
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add .
           git commit -m "Build site"
           git push -f origin site
+
+      # -----------------------------------------------------------------
+      # Done
+      # -----------------------------------------------------------------
+      - name: Confirm deployment
+        run: git log -1 --oneline
