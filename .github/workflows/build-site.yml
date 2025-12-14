@@ -53,10 +53,13 @@ jobs:
         run: |
           
           git checkout --orphan site
-          git rm -rf . || true
-          git clean -fdx
+          git rm -rf . ':(exclude)dist'
 
-          cp checkout main dist/*
+
+          #git rm -rf . || true
+          #git clean -fdx
+
+          #cp checkout main dist/*
           #mv dist/* ..
           #rm dist -r
 
