@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
 
       # -------------------------------------------------------------
-      # 2. Checkout Heckla engine (reusable code, not pushed)
+      # 2. Checkout Heckla engine (reusable code)
       # -------------------------------------------------------------
       - name: Checkout Heckla engine
         uses: actions/checkout@v4
@@ -48,33 +48,39 @@ jobs:
           pip install -r heckla/requirements.txt
 
       # -------------------------------------------------------------
-      # 5. Build site into dist/
+      # 5. Build site in isolated temp folder
       # -------------------------------------------------------------
       - name: Build site
         run: |
-          python heckla/build.py
+          # Create temp folder for isolated build
+          BUILD_TMP=$(mktemp -d)
+          
+          # Copy only content and templates into temp folder
+          cp -r content templates "$BUILD_TMP/"
+          
+          # Run build; output goes inside temp folder
+          python heckla/build.py --site-root "$BUILD_TMP" --output "$BUILD_TMP/dist"
 
-      # -------------------------------------------------------------
-      # 6. Prepare orphan site branch (clean, only built files)
-      # -------------------------------------------------------------
-      - name: Deploy to site branch
-        run: |
-          # Safety check: dist exists and is not empty
-          if [ ! -d "dist" ] || [ -z "$(ls -A dist)" ]; then
+          # Check that dist exists and is not empty
+          if [ ! -d "$BUILD_TMP/dist" ] || [ -z "$(ls -A $BUILD_TMP/dist)" ]; then
             echo "Build failed: dist is missing or empty"
             exit 1
           fi
 
-          # Copy only the build output into a temporary folder
-          TMP_SITE=$(mktemp -d)
-          cp -rL dist/* "$TMP_SITE/"
+          # Store temp folder path for next step
+          echo "BUILD_TMP=$BUILD_TMP" >> $GITHUB_ENV
 
-          # Create orphan branch for site
+      # -------------------------------------------------------------
+      # 6. Deploy to orphan site branch
+      # -------------------------------------------------------------
+      - name: Deploy to site branch
+        run: |
+          # Checkout orphan branch
           git checkout --orphan site
           git rm -rf . || true
 
-          # Copy only built files into repo root
-          cp -r "$TMP_SITE/"* .
+          # Copy built files from temp folder only
+          cp -r "$BUILD_TMP/dist/"* .
 
           # Commit and push
           git config user.name "github-actions[bot]"
@@ -83,9 +89,3 @@ jobs:
           git add .
           git commit -m "Build site"
           git push -f origin site
-
-      # -------------------------------------------------------------
-      # 7. Confirm deployment
-      # -------------------------------------------------------------
-      - name: Confirm deployment
-        run: git log -1 --oneline
