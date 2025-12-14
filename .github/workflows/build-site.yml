@@ -45,10 +45,13 @@ jobs:
 
       - name: Deploy to orphan site branch
         run: |
+          
           git checkout --orphan site
-          git rm -rf . || true
-          git clean -fdx
+          #git rm -rf . || true
+          #git clean -fdx
+          #echo "just did - git clean fdx "
           cp -r dist/* .
+
           git add .
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
