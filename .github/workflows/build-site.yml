@@ -47,10 +47,13 @@ jobs:
         run: |
           
           git checkout --orphan site
-          #git rm -rf . || true
-          #git clean -fdx
-          #echo "just did - git clean fdx "
-          cp -r dist/* .
+          git rm -rf . || true
+          git clean -fdx
+          echo "just did - git clean fdx "
+          
+          git checkout main -- dist
+          mv dist/* .
+          rmdir dist
 
           git add .
           git config user.name "github-actions[bot]"
