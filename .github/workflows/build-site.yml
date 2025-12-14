@@ -44,21 +44,28 @@ jobs:
         run: |
           python heckla/build.py
 
-          # Ensure dist exists and is not empty
-          if [ ! -d "dist" ] || [ -z "$(ls -A dist)" ]; then
-            echo "Build failed: dist is missing or empty"
-            exit 1
-          fi
+- name: Build site
+  run: python heckla/build.py
 
+- name: Deploy site branch
+  run: |
+    # Copy dist to a temporary folder
+    TMP_DIST=$(mktemp -d)
+    cp -r dist/* "$TMP_DIST/"
 
-          git checkout --orphan site
-          git rm -rf . || true
-          git clean -fdx
-          cp -r dist/* .
+    # Switch to orphan branch
+    git checkout --orphan site
+    git rm -rf . || true
+    git clean -fdx
+
+    # Copy back built files
+    cp -r "$TMP_DIST/"* .
+
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
          
-          git add .
-          git commit -m "Build site"
-          git push -f origin site
+    # Commit and push
+    git add .
+    git commit -m "Build site"
+    git push -f origin site
