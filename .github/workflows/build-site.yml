@@ -16,11 +16,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout consuming repo
+      # 1. Checkout consuming repo (content + templates)
       - name: Checkout site repository
         uses: actions/checkout@v4
 
-      # 2. Checkout Heckla engine
+      # 2. Checkout Heckla engine (reusable code)
       - name: Checkout Heckla engine
         uses: actions/checkout@v4
         with:
@@ -39,35 +39,33 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r heckla/requirements.txt
 
-      # 5. Build site in isolated temp folder
-      - name: Build site in temp folder
+      # 5. Build site in-place
+      - name: Build site
         run: |
-          BUILD_TMP=$(mktemp -d)
-          cp -r content templates "$BUILD_TMP/"
-          python heckla/build.py --site-root "$BUILD_TMP" --output "$BUILD_TMP/dist"
+          python heckla/build.py
 
-          # Check build output
-          if [ ! -d "$BUILD_TMP/dist" ] || [ -z "$(ls -A $BUILD_TMP/dist)" ]; then
+          # Ensure dist exists and is not empty
+          if [ ! -d "dist" ] || [ -z "$(ls -A dist)" ]; then
             echo "Build failed: dist is missing or empty"
             exit 1
           fi
-          echo "BUILD_TMP=$BUILD_TMP" >> $GITHUB_ENV
 
-      # 6. Deploy to orphan site branch
+      # 6. Deploy to orphan site branch (Heckla-free)
       - name: Deploy to site branch
         run: |
           git checkout --orphan site
           git rm -rf . || true
+
           # Remove all untracked files/folders (heckla, workflows, etc.)
           git clean -fdx
+
           # Copy only built files
-          cp -r "$BUILD_TMP/dist/"* .
+          cp -r dist/* .
+
+          # Commit and push
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
           git add .
           git commit -m "Build site"
           git push -f origin site
-
-
 
