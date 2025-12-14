@@ -1,0 +1,57 @@
+name: Build static site (Heckla)
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        required: false
+        default: "3.11"
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout site repository
+        uses: actions/checkout@v4
+
+      - name: Checkout Heckla engine
+        uses: actions/checkout@v4
+        with:
+          repository: yellowmoss/heckla
+          path: heckla
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r heckla/requirements.txt
+
+      - name: Build site
+        run: |
+          python heckla/build.py
+
+      - name: Publish to site branch
+        run: |
+          if [ ! -d "dist" ] || [ -z "$(ls -A dist)" ]; then
+            echo "dist missing or empty"
+            exit 1
+          fi
+
+          mkdir /tmp/site
+          cp -r dist/* /tmp/site/
+
+          git checkout --orphan site
+          git rm -rf . || true
+
+          cp -r /tmp/site/* .
+          rm -rf dist
+
+          git add .
+          git commit -m "Build site"
+          git push -f origin site
