@@ -16,47 +16,47 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # -----------------------------------------------------------------
+      # -------------------------------------------------------------
       # 1. Checkout the consuming repo (site content + templates)
-      # -----------------------------------------------------------------
+      # -------------------------------------------------------------
       - name: Checkout site repository
         uses: actions/checkout@v4
 
-      # -----------------------------------------------------------------
-      # 2. Checkout Heckla engine (reusable code)
-      # -----------------------------------------------------------------
+      # -------------------------------------------------------------
+      # 2. Checkout Heckla engine (reusable code, not pushed)
+      # -------------------------------------------------------------
       - name: Checkout Heckla engine
         uses: actions/checkout@v4
         with:
           repository: yellowmoss/heckla
           path: heckla
 
-      # -----------------------------------------------------------------
+      # -------------------------------------------------------------
       # 3. Set up Python
-      # -----------------------------------------------------------------
+      # -------------------------------------------------------------
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python-version }}
 
-      # -----------------------------------------------------------------
+      # -------------------------------------------------------------
       # 4. Install dependencies
-      # -----------------------------------------------------------------
+      # -------------------------------------------------------------
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r heckla/requirements.txt
 
-      # -----------------------------------------------------------------
+      # -------------------------------------------------------------
       # 5. Build site into dist/
-      # -----------------------------------------------------------------
+      # -------------------------------------------------------------
       - name: Build site
         run: |
           python heckla/build.py
 
-      # -----------------------------------------------------------------
+      # -------------------------------------------------------------
       # 6. Prepare orphan site branch (clean, only built files)
-      # -----------------------------------------------------------------
+      # -------------------------------------------------------------
       - name: Deploy to site branch
         run: |
           # Safety check: dist exists and is not empty
@@ -65,7 +65,7 @@ jobs:
             exit 1
           fi
 
-          # Copy only the build output into temporary folder
+          # Copy only the build output into a temporary folder
           TMP_SITE=$(mktemp -d)
           cp -rL dist/* "$TMP_SITE/"
 
@@ -73,7 +73,7 @@ jobs:
           git checkout --orphan site
           git rm -rf . || true
 
-          # Copy built files into repo root
+          # Copy only built files into repo root
           cp -r "$TMP_SITE/"* .
 
           # Commit and push
@@ -84,8 +84,8 @@ jobs:
           git commit -m "Build site"
           git push -f origin site
 
-      # -----------------------------------------------------------------
-      # Done
-      # -----------------------------------------------------------------
+      # -------------------------------------------------------------
+      # 7. Confirm deployment
+      # -------------------------------------------------------------
       - name: Confirm deployment
         run: git log -1 --oneline
