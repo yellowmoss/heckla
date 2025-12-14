@@ -1,67 +1,64 @@
 name: Build and deploy static site
 
 on:
-  workflow_call:
-    inputs:
-      python-version:
-        required: false
-        default: '3.11'
-        type: string
+  push:
+    branches:
+      - main
 
 permissions:
-  contents: write   # allow pushing to the consuming repo
+  contents: write
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout the consuming repo (content + templates)
-      - name: Checkout consuming repository
-        uses: actions/checkout@v4
+      # 1. Checkout consuming repo
+      - uses: actions/checkout@v4
 
-      # 2. Checkout Heckla engine
-      - name: Checkout Heckla engine
-        uses: actions/checkout@v4
+      # 2. Set up Python
+      - uses: actions/setup-python@v5
         with:
-          repository: yellowmoss/heckla
-          path: heckla
+          python-version: '3.11'
 
-      # 3. Set up Python
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ inputs.python-version }}
+      # 3. Download Heckla files (build.py + requirements.txt) from the separate repo
+      - name: Download Heckla engine
+        run: |
+          mkdir heckla
+          curl -L -o heckla/build.py https://raw.githubusercontent.com/yellowmoss/heckla/main/build.py
+          curl -L -o heckla/requirements.txt https://raw.githubusercontent.com/yellowmoss/heckla/main/requirements.txt
 
       # 4. Install dependencies
-      - name: Install dependencies
+      - name: Install Heckla dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r heckla/requirements.txt
 
-      # 5. Build site in-place
+      # 5. Build the site
       - name: Build site
         run: |
           python heckla/build.py
 
-      - name: Deploy site branch
-        run: |
-          # Copy dist to a temporary folder
-          TMP_DIST=$(mktemp -d)
-          cp -r dist/* "$TMP_DIST/"
+          if [ ! -d "dist" ] || [ -z "$(ls -A dist)" ]; then
+            echo "Build failed: dist is missing or empty"
+            exit 1
+          fi
 
-          # Switch to orphan branch
+      # 6. Deploy to orphan site branch
+      - name: Deploy to site branch
+        run: |
           git checkout --orphan site
           git rm -rf . || true
           git clean -fdx
 
-          # Copy back built files
-          cp -r "$TMP_DIST/"* .
+          cp -r dist/* .
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-         
-          # Commit and push
           git add .
           git commit -m "Build site"
           git push -f origin site
+
+
+
+         
