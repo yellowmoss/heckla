@@ -56,9 +56,11 @@ jobs:
           git rm -rf . ':(exclude)dist'
           git clean -fdx
 
-          cd "$(git rev-parse --show-toplevel)"
-          mv dist/* ..
-          rm dist -r
+          cd "$(git rev-parse --show-toplevel)" || exit 1
+          cd dist
+          mv * ..
+          cd ..
+          rmdir dist
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
