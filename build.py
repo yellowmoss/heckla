@@ -1,7 +1,6 @@
 from pathlib import Path
 import shutil
 from dataclasses import dataclass
-import os
 import markdown
 import yaml
 from jinja2 import Environment, FileSystemLoader, select_autoescape
@@ -11,7 +10,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 # Paths
 # --------------------------------------------------------------------
 
-SITE_ROOT = Path(os.environ.get("GITHUB_WORKSPACE", Path.cwd()))
+SITE_ROOT = Path(__file__).resolve().parent.parent
 
 CONTENT_DIR = SITE_ROOT / "content"
 TEMPLATES_DIR = SITE_ROOT / "templates"
