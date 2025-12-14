@@ -10,10 +10,14 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 # Paths
 # --------------------------------------------------------------------
 
-ROOT = Path(__file__).parent
-CONTENT_DIR = ROOT / "content"
-TEMPLATES_DIR = ROOT / "templates"
-DIST_DIR = ROOT / "dist"
+
+from pathlib import Path
+
+SITE_ROOT = Path.cwd()
+
+CONTENT_DIR = SITE_ROOT / "content"
+TEMPLATES_DIR = SITE_ROOT / "templates"
+DIST_DIR = SITE_ROOT / "dist"
 
 # --------------------------------------------------------------------
 # Models
