@@ -44,28 +44,24 @@ jobs:
         run: |
           python heckla/build.py
 
-- name: Build site
-  run: python heckla/build.py
+      - name: Deploy site branch
+        run: |
+          # Copy dist to a temporary folder
+          TMP_DIST=$(mktemp -d)
+          cp -r dist/* "$TMP_DIST/"
 
-- name: Deploy site branch
-  run: |
-    # Copy dist to a temporary folder
-    TMP_DIST=$(mktemp -d)
-    cp -r dist/* "$TMP_DIST/"
+          # Switch to orphan branch
+          git checkout --orphan site
+          git rm -rf . || true
+          git clean -fdx
 
-    # Switch to orphan branch
-    git checkout --orphan site
-    git rm -rf . || true
-    git clean -fdx
-
-    # Copy back built files
-    cp -r "$TMP_DIST/"* .
-
+          # Copy back built files
+          cp -r "$TMP_DIST/"* .
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
          
-    # Commit and push
-    git add .
-    git commit -m "Build site"
-    git push -f origin site
+          # Commit and push
+          git add .
+          git commit -m "Build site"
+          git push -f origin site
