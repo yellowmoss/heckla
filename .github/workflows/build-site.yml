@@ -54,10 +54,7 @@ jobs:
           
           git checkout --orphan site
           git rm -rf . ':(exclude)dist'
-
-
-          #git rm -rf . || true
-          #git clean -fdx
+          git clean -fdx
 
           #cp checkout main dist/*
           #mv dist/* ..
