@@ -1,20 +1,23 @@
 name: Build and deploy static site
 
 on:
-  push:
-    branches:
-      - main
+  workflow_call:
+    inputs:
+      python-version:
+        required: false
+        default: '3.11'
+        type: string
 
 permissions:
-  contents: write   # allow pushing to site branch
+  contents: write   # allow pushing to the consuming repo
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout your main repository (content + templates)
-      - name: Checkout repository
+      # 1. Checkout the consuming repo (content + templates)
+      - name: Checkout consuming repository
         uses: actions/checkout@v4
 
       # 2. Checkout Heckla engine
@@ -28,7 +31,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: ${{ inputs.python-version }}
 
       # 4. Install dependencies
       - name: Install dependencies
@@ -36,7 +39,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r heckla/requirements.txt
 
-      # 5. Build the site in-place
+      # 5. Build site in-place
       - name: Build site
         run: |
           python heckla/build.py
@@ -47,27 +50,25 @@ jobs:
             exit 1
           fi
 
-      # 6. Deploy to orphan site branch (clean)
+      # 6. Deploy to orphan site branch (Heckla-free)
       - name: Deploy to site branch
         run: |
-          # Create orphan branch
           git checkout --orphan site
-
-          # Remove all tracked files
           git rm -rf . || true
 
-          # Remove all untracked files/folders, including heckla, .github, etc.
+          # Remove all untracked files and folders, including heckla and workflows
           git clean -fdx
 
-          # Copy built files
+          # Copy only built files
           cp -r dist/* .
 
-          # Commit and push
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
           git add .
           git commit -m "Build site"
           git push -f origin site
+
 
 
 
