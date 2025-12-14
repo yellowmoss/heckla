@@ -12,9 +12,11 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 SITE_ROOT = Path(__file__).resolve().parent.parent
 
-CONTENT_DIR = SITE_ROOT / "content"
+CONTENT_DIR   = SITE_ROOT / "content"
 TEMPLATES_DIR = SITE_ROOT / "templates"
-DIST_DIR = SITE_ROOT / "dist"
+STATIC_DIR    = SITE_ROOT / "static"
+DIST_DIR      = SITE_ROOT / "dist"
+
 
 # --------------------------------------------------------------------
 # Models
@@ -40,6 +42,14 @@ if DIST_DIR.exists():
     shutil.rmtree(DIST_DIR)
 DIST_DIR.mkdir()
 
+# Copy static files verbatim
+if STATIC_DIR.exists():
+    shutil.copytree(
+        STATIC_DIR,
+        DIST_DIR,
+        dirs_exist_ok=True
+    )
+
 # Jinja environment
 env = Environment(
     loader=FileSystemLoader(TEMPLATES_DIR),
@@ -51,6 +61,7 @@ template = env.get_template("default.html")
 md = markdown.Markdown(
     extensions=["extra", "tables", "fenced_code"]
 )
+
 
 # --------------------------------------------------------------------
 # Helpers
@@ -78,8 +89,25 @@ def title_from_path(path: Path) -> str:
     return path.stem.replace("-", " ").title()
 
 
+def page_output_and_url(rel: Path):
+    """
+    Routing rules:
+    - content/_index.md           → /
+    - content/section/_index.md   → /section/
+    - content/section/page.md     → /section/page/
+    """
+    if rel == Path("_index.md"):
+        return DIST_DIR, "/"
+
+    if rel.name == "_index.md":
+        return DIST_DIR / rel.parent, f"/{rel.parent}/"
+
+    out_dir = DIST_DIR / rel.with_suffix("")
+    return out_dir, f"/{rel.with_suffix('')}/"
+
+
 # --------------------------------------------------------------------
-# Parse phase (no writing)
+# Parse phase (NO WRITING)
 # --------------------------------------------------------------------
 
 pages: list[Page] = []
@@ -90,17 +118,7 @@ for md_path in CONTENT_DIR.rglob("*.md"):
     section = rel.parent
 
     frontmatter, content_html = parse_markdown(md_path)
-
-    # Routing rules
-    if rel == Path("_index.md"):
-        output_dir = DIST_DIR
-        url = "/"
-    elif rel.name == "_index.md":
-        output_dir = DIST_DIR / section
-        url = f"/{section}/"
-    else:
-        output_dir = DIST_DIR / rel.with_suffix("")
-        url = f"/{rel.with_suffix('')}/"
+    output_dir, url = page_output_and_url(rel)
 
     page = Page(
         source=md_path,
@@ -114,6 +132,7 @@ for md_path in CONTENT_DIR.rglob("*.md"):
 
     pages.append(page)
     sections.setdefault(section, []).append(page)
+
 
 # --------------------------------------------------------------------
 # Emit real pages
@@ -131,24 +150,24 @@ for page in pages:
     (page.output_dir / "index.html").write_text(html, encoding="utf-8")
     print(f"Built {page.url}")
 
+
 # --------------------------------------------------------------------
 # Emit synthetic section indexes
 # --------------------------------------------------------------------
 
 for section, section_pages in sections.items():
+
     # Root handled explicitly via content/_index.md
     if section == Path("."):
         continue
 
     index_md = CONTENT_DIR / section / "_index.md"
-    output_dir = DIST_DIR / section
-    output_file = output_dir / "index.html"
 
-    # If a real section index exists, do nothing
+    # Real index exists → already rendered
     if index_md.exists():
         continue
 
-    # Only include real content pages
+    # Only include non-index pages
     children = [
         p for p in section_pages
         if p.source.name != "_index.md"
@@ -171,16 +190,18 @@ for section, section_pages in sections.items():
 </ul>
 """
 
+    output_dir = DIST_DIR / section
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     html = template.render(
         title=heading,
         description=f"Index of {heading}",
         content=synthetic_content,
     )
 
-    output_dir.mkdir(parents=True, exist_ok=True)
-    output_file.write_text(html, encoding="utf-8")
-
+    (output_dir / "index.html").write_text(html, encoding="utf-8")
     print(f"Generated synthetic index for /{section}/")
+
 
 # --------------------------------------------------------------------
 # Done
