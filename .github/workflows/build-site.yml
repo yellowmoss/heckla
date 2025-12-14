@@ -1,26 +1,23 @@
-name: Build static site (Heckla)
+name: Build and deploy static site
 
 on:
-  workflow_call:
-    inputs:
-      python-version:
-        required: false
-        default: "3.11"
-        type: string
+  push:
+    branches:
+      - main
 
 permissions:
-  contents: write   # allow pushing to the consuming repo
+  contents: write   # allow pushing to site branch
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Checkout consuming repo (content + templates)
-      - name: Checkout site repository
+      # 1. Checkout your main repository (content + templates)
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2. Checkout Heckla engine (reusable code)
+      # 2. Checkout Heckla engine
       - name: Checkout Heckla engine
         uses: actions/checkout@v4
         with:
@@ -31,7 +28,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ inputs.python-version }}
+          python-version: '3.11'
 
       # 4. Install dependencies
       - name: Install dependencies
@@ -39,7 +36,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r heckla/requirements.txt
 
-      # 5. Build site in-place
+      # 5. Build the site in-place
       - name: Build site
         run: |
           python heckla/build.py
@@ -50,17 +47,20 @@ jobs:
             exit 1
           fi
 
-      # 6. Deploy to orphan site branch (Heckla-free)
+      # 6. Deploy to orphan site branch (clean)
       - name: Deploy to site branch
         run: |
+          # Create orphan branch
           git checkout --orphan site
+
+          # Remove all tracked files
           git rm -rf . || true
 
-          # Remove all untracked files/folders (heckla, workflows, etc.)
+          # Remove all untracked files/folders, including heckla, .github, etc.
           git clean -fdx
 
-          # Copy only built files
-          #cp -r dist/* .
+          # Copy built files
+          cp -r dist/* .
 
           # Commit and push
           git config user.name "github-actions[bot]"
@@ -68,4 +68,7 @@ jobs:
           git add .
           git commit -m "Build site"
           git push -f origin site
+
+
+
 
