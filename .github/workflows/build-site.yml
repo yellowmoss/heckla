@@ -56,18 +56,9 @@ jobs:
           git rm -rf . ':(exclude)dist'
           git clean -fdx
 
-          #cd "$(git rev-parse --show-toplevel)" || exit 1
-          #cd dist
-          #mv * ..
-          #cd ..
-          #rmdir dist
-
           set -e
-
           cd "$(git rev-parse --show-toplevel)"
-
           [ -d dist ] || { echo "dist/ missing"; exit 1; }
-
           mv dist/* .
           rmdir dist
 
