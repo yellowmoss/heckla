@@ -60,7 +60,7 @@ jobs:
           git clean -fdx
 
           # Copy only built files
-          cp -r dist/* .
+          #cp -r dist/* .
 
           # Commit and push
           git config user.name "github-actions[bot]"
