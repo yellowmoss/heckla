@@ -16,76 +16,55 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # -------------------------------------------------------------
-      # 1. Checkout the consuming repo (site content + templates)
-      # -------------------------------------------------------------
+      # 1. Checkout consuming repo
       - name: Checkout site repository
         uses: actions/checkout@v4
 
-      # -------------------------------------------------------------
-      # 2. Checkout Heckla engine (reusable code)
-      # -------------------------------------------------------------
+      # 2. Checkout Heckla engine
       - name: Checkout Heckla engine
         uses: actions/checkout@v4
         with:
           repository: yellowmoss/heckla
           path: heckla
 
-      # -------------------------------------------------------------
       # 3. Set up Python
-      # -------------------------------------------------------------
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ inputs.python-version }}
 
-      # -------------------------------------------------------------
       # 4. Install dependencies
-      # -------------------------------------------------------------
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r heckla/requirements.txt
 
-      # -------------------------------------------------------------
       # 5. Build site in isolated temp folder
-      # -------------------------------------------------------------
-      - name: Build site
+      - name: Build site in temp folder
         run: |
-          # Create temp folder for isolated build
           BUILD_TMP=$(mktemp -d)
-          
-          # Copy only content and templates into temp folder
           cp -r content templates "$BUILD_TMP/"
-          
-          # Run build; output goes inside temp folder
           python heckla/build.py --site-root "$BUILD_TMP" --output "$BUILD_TMP/dist"
 
-          # Check that dist exists and is not empty
+          # Check build output
           if [ ! -d "$BUILD_TMP/dist" ] || [ -z "$(ls -A $BUILD_TMP/dist)" ]; then
             echo "Build failed: dist is missing or empty"
             exit 1
           fi
-
-          # Store temp folder path for next step
           echo "BUILD_TMP=$BUILD_TMP" >> $GITHUB_ENV
 
-      # -------------------------------------------------------------
       # 6. Deploy to orphan site branch
-      # -------------------------------------------------------------
       - name: Deploy to site branch
         run: |
-          # Checkout orphan branch
           git checkout --orphan site
           git rm -rf . || true
-
-          # Copy built files from temp folder only
           cp -r "$BUILD_TMP/dist/"* .
-
-          # Commit and push
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
           git add .
           git commit -m "Build site"
           git push -f origin site
+
+
+
+
