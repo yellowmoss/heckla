@@ -56,9 +56,9 @@ jobs:
           git rm -rf . || true
           git clean -fdx
 
-          cp checkout main dist
-          mv dist/* ..
-          rm dist -r
+          cp checkout main dist/*
+          #mv dist/* ..
+          #rm dist -r
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
