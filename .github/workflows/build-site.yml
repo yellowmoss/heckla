@@ -49,11 +49,8 @@ jobs:
           git checkout --orphan site
           git rm -rf . || true
           git clean -fdx
-          echo "just did - git clean fdx "
-          
-          git checkout main -- dist
-          mv dist/* .
-          rmdir dist
+
+          cp -r ../dist/* . 
 
           git add .
           git config user.name "github-actions[bot]"
