@@ -50,7 +50,7 @@ jobs:
           git rm -rf . || true
           git clean -fdx
 
-          cp -r ../dist/* . 
+          cp -r ../dist/* .
 
           git add .
           git config user.name "github-actions[bot]"
